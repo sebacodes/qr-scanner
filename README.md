@@ -2,6 +2,11 @@
 
 QR Scanner its a PWA that let's user to scan QR codes using virus total API to prevent access to malicious sites. 
 
+## Requirements
+
+- VirusTotal API key (free tier available at [virustotal.com](https://www.virustotal.com/gui/join-us))
+- Modern browser with camera access
+- HTTPS connection (required for camera permissions)
 
 ##  Security Disclaimer
 
@@ -32,9 +37,3 @@ This is not a definitive solution as there are many ways an attacker can still u
 
 
 The above Real-world attack scenarios would be covered in further releases.
-
-## Requirements
-
-- VirusTotal API key (free tier available at [virustotal.com](https://www.virustotal.com/gui/join-us))
-- Modern browser with camera access
-- HTTPS connection (required for camera permissions)
