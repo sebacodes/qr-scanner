@@ -23,11 +23,18 @@ export default function QRScanner() {
 
   const startScanning = async () => {
     try {
+      console.log('Starting scanner...');
       setError('');
       setResult(null);
+      setScanning(true);
+
+      // Small delay to ensure DOM is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const html5QrCode = new Html5Qrcode(scannerIdRef.current);
       html5QrCodeRef.current = html5QrCode;
+
+      console.log('Requesting camera permissions...');
 
       await html5QrCode.start(
         { facingMode: "environment" },
@@ -45,10 +52,11 @@ export default function QRScanner() {
         }
       );
 
-      setScanning(true);
+      console.log('Camera started successfully');
     } catch (err) {
       console.error('Camera error:', err);
-      setError('Camera access denied or not available. Please check permissions.');
+      setScanning(false);
+      setError(`Camera error: ${err.message || err}. Please allow camera access in your browser.`);
     }
   };
 
@@ -223,11 +231,12 @@ export default function QRScanner() {
           )}
 
           {scanning && (
-            <div className="relative">
-              <div id={scannerIdRef.current} className="w-full"></div>
+            <div className="relative p-4">
+              <div id="qr-reader" className="w-full"></div>
+              <p className="text-center text-gray-600 mt-4 mb-2">Position QR code in the frame</p>
               <button
                 onClick={stopScanning}
-                className="mt-4 mb-4 mx-auto block bg-red-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition shadow-lg"
+                className="mx-auto block bg-red-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition shadow-lg"
               >
                 Cancel Scan
               </button>
