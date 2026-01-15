@@ -8,10 +8,31 @@ export default function QRScanner() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [jsQRLoaded, setJsQRLoaded] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const scanIntervalRef = useRef(null);
+
+  // Load jsQR library
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';
+    script.async = true;
+    script.onload = () => {
+      console.log('jsQR loaded successfully');
+      setJsQRLoaded(true);
+    };
+    script.onerror = () => {
+      console.error('Failed to load jsQR');
+      setError('Failed to load QR code library');
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   // Check if API key exists on mount
   useEffect(() => {
@@ -21,19 +42,35 @@ export default function QRScanner() {
   }, []);
 
   const startCamera = async () => {
+    if (!jsQRLoaded) {
+      setError('QR library is still loading, please wait...');
+      return;
+    }
+
     try {
+      console.log('Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
       });
+      
+      console.log('Camera access granted');
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
-        setScanning(true);
-        setError('');
-        startScanning();
+        
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded');
+          videoRef.current.play();
+          setScanning(true);
+          setError('');
+          startScanning();
+        };
       }
     } catch (err) {
-      setError('Camera access denied. Please allow camera permissions.');
+      console.error('Camera error:', err);
+      setError(`Camera access error: ${err.message}. Please check permissions in your browser settings.`);
     }
   };
 
@@ -46,32 +83,55 @@ export default function QRScanner() {
       clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setScanning(false);
   };
 
   const startScanning = () => {
+    console.log('Starting QR code scanning...');
     scanIntervalRef.current = setInterval(() => {
       captureAndDecode();
-    }, 500);
+    }, 300);
   };
 
   const captureAndDecode = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      console.log('Video or canvas ref not ready');
+      return;
+    }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
+    
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      return;
+    }
 
+    const context = canvas.getContext('2d');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    
+    if (canvas.width === 0 || canvas.height === 0) {
+      return;
+    }
+
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    
+    if (window.jsQR) {
+      const code = window.jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert",
+      });
 
-    if (code) {
-      stopCamera();
-      checkURL(code.data);
+      if (code) {
+        console.log('QR Code detected:', code.data);
+        stopCamera();
+        checkURL(code.data);
+      }
+    } else {
+      console.error('jsQR not available');
     }
   };
 
@@ -80,6 +140,8 @@ export default function QRScanner() {
     setError('');
     
     try {
+      console.log('Checking URL:', url);
+      
       // First, submit the URL to VirusTotal
       const submitResponse = await fetch('https://www.virustotal.com/api/v3/urls', {
         method: 'POST',
@@ -91,14 +153,17 @@ export default function QRScanner() {
       });
 
       if (!submitResponse.ok) {
+        const errorText = await submitResponse.text();
+        console.error('VirusTotal API error:', errorText);
         throw new Error('Invalid API key or request failed');
       }
 
       const submitData = await submitResponse.json();
       const analysisId = submitData.data.id;
+      console.log('Analysis ID:', analysisId);
 
-      // Wait a moment for analysis to complete
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for analysis to complete
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Get the analysis results
       const analysisResponse = await fetch(`https://www.virustotal.com/api/v3/analyses/${analysisId}`, {
@@ -107,18 +172,23 @@ export default function QRScanner() {
         }
       });
 
+      if (!analysisResponse.ok) {
+        throw new Error('Failed to retrieve analysis results');
+      }
+
       const analysisData = await analysisResponse.json();
       const stats = analysisData.data.attributes.stats;
 
       setResult({
         url,
-        malicious: stats.malicious,
-        suspicious: stats.suspicious,
-        harmless: stats.harmless,
-        undetected: stats.undetected,
-        total: stats.malicious + stats.suspicious + stats.harmless + stats.undetected
+        malicious: stats.malicious || 0,
+        suspicious: stats.suspicious || 0,
+        harmless: stats.harmless || 0,
+        undetected: stats.undetected || 0,
+        total: (stats.malicious || 0) + (stats.suspicious || 0) + (stats.harmless || 0) + (stats.undetected || 0)
       });
     } catch (err) {
+      console.error('Check URL error:', err);
       setError(err.message || 'Failed to check URL. Please verify your API key.');
     } finally {
       setLoading(false);
@@ -128,13 +198,6 @@ export default function QRScanner() {
   const handleScanAgain = () => {
     setResult(null);
     setError('');
-  };
-
-  const getStatusColor = () => {
-    if (!result) return 'gray';
-    if (result.malicious > 0) return 'red';
-    if (result.suspicious > 0) return 'yellow';
-    return 'green';
   };
 
   const getStatusIcon = () => {
@@ -186,6 +249,12 @@ export default function QRScanner() {
                 </a>
               </p>
             </div>
+
+            {!jsQRLoaded && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">Loading QR code library...</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -202,7 +271,10 @@ export default function QRScanner() {
             <h1 className="text-2xl font-bold text-gray-800">QR Scanner</h1>
           </div>
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={() => {
+              stopCamera();
+              setShowSettings(true);
+            }}
             className="p-2 hover:bg-white rounded-lg transition"
           >
             <Settings className="w-6 h-6 text-gray-600" />
@@ -220,23 +292,30 @@ export default function QRScanner() {
               </p>
               <button
                 onClick={startCamera}
-                className="bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-indigo-700 transition text-lg"
+                disabled={!jsQRLoaded}
+                className="bg-indigo-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-indigo-700 transition text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Start Scanning
+                {jsQRLoaded ? 'Start Scanning' : 'Loading...'}
               </button>
             </div>
           )}
 
           {scanning && (
-            <div className="relative">
+            <div className="relative bg-black">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
-                className="w-full"
+                muted
+                className="w-full max-h-96 object-cover"
               />
               <canvas ref={canvasRef} className="hidden" />
-              <div className="absolute inset-0 border-4 border-indigo-500 m-12 rounded-lg pointer-events-none"></div>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-64 h-64 border-4 border-indigo-500 rounded-lg"></div>
+              </div>
+              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white px-4 py-2 rounded-lg text-sm">
+                Position QR code within the frame
+              </div>
               <button
                 onClick={stopCamera}
                 className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-600 transition"
@@ -310,10 +389,12 @@ export default function QRScanner() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* jsQR Library */}
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+        {/* Debug info */}
+        <div className="mt-4 text-center text-xs text-gray-500">
+          jsQR: {jsQRLoaded ? '✓ Loaded' : '⏳ Loading...'}
+        </div>
+      </div>
     </div>
   );
 }
