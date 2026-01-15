@@ -1,16 +1,40 @@
-# React + Vite
+# QR Scanner
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+QR Scanner its a PWA that let's user to scan QR codes using virus total API to prevent access to malicious sites. 
 
-Currently, two official plugins are available:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+##  Security Disclaimer
 
-## React Compiler
+This is not a definitive solution as there are many ways an attacker can still use QR codes to attack like:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Zero-day phishing site, too new to be in Virus Totl database
+- malformed QR codes still can exploit scanner vulnerabilities
+- Legit-looking fake sites
+- Malicious payloads in the QR itself
+- Auto-opening URLs
+- Data exfiltration, like QR codes with tracking pixels
 
-## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Best Practices
+
+- Always review the full URL before opening it
+- Be suspicious of QR codes in public places or unsolicited messages
+- Verify the URL matches the expected domain
+- When in doubt, manually type the URL instead
+
+
+## Real-world attack scenarios:
+
+1. Fake parking meter QR → Brand new phishing site → VirusTotal has no data yet → Shows as "safe"
+2. Malicious WiFi QR → Contains credentials that auto-connect → Phone connects before you can check
+3. Unicode homograph attack → e.g. paypaI.com (capital i looks like lowercase L) → Passes VirusTotal
+4. PDF/File QR → Downloads malware directly → VirusTotal might not catch it in time
+
+
+The above Real-world attack scenarios would be covered in further releases.
+
+## Requirements
+
+- VirusTotal API key (free tier available at [virustotal.com](https://www.virustotal.com/gui/join-us))
+- Modern browser with camera access
+- HTTPS connection (required for camera permissions)
