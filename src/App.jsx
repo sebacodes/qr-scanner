@@ -29,7 +29,7 @@ export default function QRScanner() {
       setScanning(true);
 
       // Small delay to ensure DOM is ready
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       const html5QrCode = new Html5Qrcode(scannerIdRef.current);
       html5QrCodeRef.current = html5QrCode;
@@ -80,22 +80,27 @@ export default function QRScanner() {
       console.log('Checking URL:', url);
       
       // Submit the URL to VirusTotal
-      const submitResponse = await fetch('https://www.virustotal.com/api/v3/urls', {
-        method: 'POST',
-        headers: {
-          'x-apikey': apiKey,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: `url=${encodeURIComponent(url)}`
-      });
+      const options = {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'x-apikey': apiKey,
+        'content-type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({url: encodeURIComponent(url)})
+    };
 
-      if (!submitResponse.ok) {
-        const errorData = await submitResponse.json();
+    fetch('https://www.virustotal.com/api/v3/urls', options)
+      .then(res => res.json())
+
+
+      if (!res.ok) {
+        const errorData = await res.json();
         console.error('VirusTotal API error:', errorData);
         throw new Error('Invalid API key or request failed. Check your API key.');
       }
 
-      const submitData = await submitResponse.json();
+      const submitData = await res.json();
       const analysisId = submitData.data.id;
       console.log('Analysis ID:', analysisId);
 
