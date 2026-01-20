@@ -1,37 +1,40 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { Html5Qrcode } from 'html5-qrcode';
 import './App.css'
 
 
 function App() {
   const [count, setCount] = useState(0)
-  const [key, setKEY] = useState("")
-  const [url, setURL] = useState("")
-  const [result, setResult] = useState("")
-
-// Page starts asking for your virus total API key, then save it
-// Go to Scan
-// Delete all data
-
-//Scan page ask for cammera permissions to take pictures
-//Then they extract the url from the image and send it to virus total
-//Then return the results
+  const [apiKey, setApiKey] = useState('')
+  const [url, setURL] = useState('')
+  const [result, setResult] = useState('')
 
 
 
+  //Html5-qrcode basic usage from documentation
+  const html5QrCode = new Html5Qrcode("reader");
 
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      console.log(decodedText);
+    }
+  );
+
+
+// Page starts asking for your virus total API key and save it on click save
+// Options: Go to Scan, (feat: save session scans)
+// Options: Delete all data
+
+// Scan page ask for cammera permissions to take pictures
+// Then they extract the url from the image and send it to virus total
+// Then return the results
+// Options: Go to Scan, (feat: save session scans)
+// Options: Delete all data
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
       <h1>Vite + React</h1>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
