@@ -1,73 +1,40 @@
-# React + TypeScript + Vite
+# QR Scan - VirusTotal 
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+QR Scan its a PWA that let's user to scan QR codes using virus total API to prevent access to malicious sites. 
 
-Currently, two official plugins are available:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Requirements
 
-## React Compiler
+- VirusTotal API key (free tier available at [virustotal.com](https://www.virustotal.com/gui/join-us))
+- Modern browser with camera access
+- HTTPS connection (required for camera permissions)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+##  Security Disclaimer
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+This is not a definitive solution as there are many ways an attacker can still use QR codes to attack like:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Zero-day phishing site, too new to be in Virus Totl database
+- malformed QR codes still can exploit scanner vulnerabilities
+- Legit-looking fake sites
+- Malicious payloads in the QR itself
+- Auto-opening URLs
+- Data exfiltration, like QR codes with tracking pixels
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Real-world attack scenarios:
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1. Fake parking meter QR → Brand new phishing site → VirusTotal has no data yet → Shows as "safe"
+2. Malicious WiFi QR → Contains credentials that auto-connect → Phone connects before you can check
+3. Unicode homograph attack → e.g. paypaI.com (capital i looks like lowercase L) → Passes VirusTotal
+4. PDF/File QR → Downloads malware directly → VirusTotal might not catch it in time
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+The above Real-world attack scenarios would be covered in further releases.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+
+## Best Practices
+
+- Always review the full URL before opening it
+- Be suspicious of QR codes in public places or unsolicited messages
+- Verify the URL matches the expected domain
+- When in doubt, manually type the URL instead

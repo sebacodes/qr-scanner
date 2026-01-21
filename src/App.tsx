@@ -1,54 +1,106 @@
-import { useState } from 'react'
-import { Html5Qrcode } from 'html5-qrcode';
+import { useState, useEffect } from 'react'
+import ApiKeyPage from './pages/ApiKeyPage';
+import ScanPage from './pages/ScanPage';
+import HistoryPage from './pages/HistoryPage';
 import './App.css'
 
-
 function App() {
-  const [count, setCount] = useState(0)
-  const [apiKey, setApiKey] = useState('')
-  const [url, setURL] = useState('')
-  const [result, setResult] = useState('')
+  const [currentPage, setCurrentPage] = useState('apiKey');
+  const [apiKey, setApiKey] = useState('');
+  const [scannedUrls, setScannedUrls] = useState([]);
 
-
-
-  //Html5-qrcode basic usage from documentation
-  const html5QrCode = new Html5Qrcode("reader");
-
-  html5QrCode.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 250 },
-    (decodedText) => {
-      console.log(decodedText);
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem('apiKey');
+    const savedUrls = localStorage.getItem('scannedUrls');
+    
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+      setCurrentPage('scan');
     }
-  );
+    if (savedUrls) {
+      setScannedUrls(JSON.parse(savedUrls));
+    }
+  }, []);
 
+  const handleSaveApiKey = (key) => {
+    setApiKey(key);
+    localStorage.setItem('apiKey', key);
+    setCurrentPage('scan');
+  };
 
-// Page starts asking for your virus total API key and save it on click save
-// Options: Go to Scan, (feat: save session scans)
-// Options: Delete all data
+  const scanUrlWithVirusTotal = async (url) => {
+    try {
+      const options = {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'x-apikey': apiKey,
+          'content-type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ url: url })
+      };
 
-// Scan page ask for cammera permissions to take pictures
-// Then they extract the url from the image and send it to virus total
-// Then return the results
-// Options: Go to Scan, (feat: save session scans)
-// Options: Delete all data
+      const response = await fetch('https://www.virustotal.com/api/v3/urls', options);
+      const data = await response.json();
+      
+      return {
+        success: true,
+        scanId: data.data?.id,
+        analysisUrl: data.data?.links?.self,
+        response: data
+      };
+    } catch (error) {
+      console.error('VirusTotal API Error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  };
+
+  const handleUrlScanned = async (url) => {
+    
+    const virusTotalResult = await scanUrlWithVirusTotal(url);
+    
+    
+    const newUrls = [
+      ...scannedUrls, 
+      { 
+        url, 
+        timestamp: new Date().toISOString(),
+        virusTotal: virusTotalResult
+      }
+    ];
+    
+    setScannedUrls(newUrls);
+    localStorage.setItem('scannedUrls', JSON.stringify(newUrls));
+  };
 
   return (
-    <>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="app">
+      <nav>
+        <button onClick={() => setCurrentPage('apiKey')}>API Key</button>
+        <button onClick={() => setCurrentPage('scan')}>Scan</button>
+        <button onClick={() => setCurrentPage('history')}>History</button>
+      </nav>
+
+      {currentPage === 'apiKey' && (
+        <ApiKeyPage 
+          currentApiKey={apiKey}
+          onSave={handleSaveApiKey} 
+        />
+      )}
+      {currentPage === 'scan' && (
+        <ScanPage 
+          apiKey={apiKey}
+          onUrlScanned={handleUrlScanned} 
+        />
+      )}
+      {currentPage === 'history' && (
+        <HistoryPage urls={scannedUrls} />
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;
