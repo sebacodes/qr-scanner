@@ -1,4 +1,22 @@
-function HistoryPage({ urls }) {
+interface VirusTotalResult {
+  success: boolean;
+  scanId?: string;
+  analysisUrl?: string;
+  response?: any;
+  error?: string;
+}
+
+interface ScannedUrl {
+  url: string;
+  timestamp: string;
+  virusTotal: VirusTotalResult;
+}
+
+interface HistoryPageProps {
+  urls: ScannedUrl[];
+}
+
+function HistoryPage({ urls }: HistoryPageProps) {
   const clearHistory = () => {
     if (confirm('Clear all scan history?')) {
       localStorage.removeItem('scannedUrls');
@@ -8,7 +26,7 @@ function HistoryPage({ urls }) {
 
   return (
     <div className="page">
-      <h1>QR Scan History</h1>
+      <h1>Scan History</h1>
       
       {urls.length === 0 ? (
         <p>No URLs scanned yet.</p>

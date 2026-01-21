@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, type CameraDevice } from 'html5-qrcode';
 
-function ScanPage({ apiKey, onUrlScanned }) {
+interface ScanPageProps {
+  apiKey: string;
+  onUrlScanned: (url: string) => Promise<void>;
+}
+
+function ScanPage({ apiKey, onUrlScanned }: ScanPageProps) {
   const [result, setResult] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [cameras, setCameras] = useState([]);
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [selectedCamera, setSelectedCamera] = useState('');
-  const html5QrCode = useRef(null);
+  const html5QrCode = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
     html5QrCode.current = new Html5Qrcode("reader");
@@ -29,26 +34,25 @@ function ScanPage({ apiKey, onUrlScanned }) {
   const startScanning = async () => {
     try {
       setIsScanning(true);
-      setResult(''); 
+      setResult('');
       const cameraId = selectedCamera || { facingMode: "environment" };
       
-      await html5QrCode.current.start(
+      await html5QrCode.current?.start(
         cameraId,
         {
           fps: 10,   
           qrbox: { width: 250, height: 250 }
         },
-        async (decodedText) => {
+        async (decodedText: string) => {
           setResult(decodedText);
           setIsChecking(true);
           await stopScanning();
           
-          
           await onUrlScanned(decodedText);
           setIsChecking(false);
         },
-        (errorMessage) => {
-          console.log(errorMessage)
+        (errorMessage: string) => {
+          console.warn(`QR Code no match: ${errorMessage}`);
         }
       );
     } catch (err) {
@@ -72,7 +76,7 @@ function ScanPage({ apiKey, onUrlScanned }) {
   if (!apiKey) {
     return (
       <div className="page">
-        <h1>QR Scan</h1>
+        <h1>QR Scanner</h1>
         <p>Set up your VirusTotal API key first to start scanning.</p>
       </div>
     );
@@ -112,7 +116,7 @@ function ScanPage({ apiKey, onUrlScanned }) {
 
       {isChecking && (
         <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff3cd', borderRadius: '4px' }}>
-          <p>Submitting URL or analysis</p>
+          <p>Checking URL with VirusTotal...</p>
         </div>
       )}
 

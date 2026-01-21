@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 
-function ApiKeyPage({ currentApiKey, onSave }) {
+interface ApiKeyPageProps {
+  currentApiKey: string;
+  onSave: (key: string) => void;
+}
+
+function ApiKeyPage({ currentApiKey, onSave }: ApiKeyPageProps) {
   const [key, setKey] = useState(currentApiKey || '');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (key.trim()) {
       onSave(key.trim());

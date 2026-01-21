@@ -1,13 +1,27 @@
 import { useState, useEffect } from 'react'
-import ApiKeyPage from './pages/ApiKeyPage';
-import ScanPage from './pages/ScanPage';
-import HistoryPage from './pages/HistoryPage';
+import ApiKeyPage from './pages/ApiKeyPage'
+import ScanPage from './pages/ScanPage'
+import HistoryPage from './pages/HistoryPage' 
 import './App.css'
+
+interface VirusTotalResult {
+  success: boolean;
+  scanId?: string;
+  analysisUrl?: string;
+  response?: any;
+  error?: string;
+}
+
+interface ScannedUrl {
+  url: string;
+  timestamp: string;
+  virusTotal: VirusTotalResult;
+}
 
 function App() {
   const [currentPage, setCurrentPage] = useState('apiKey');
   const [apiKey, setApiKey] = useState('');
-  const [scannedUrls, setScannedUrls] = useState([]);
+  const [scannedUrls, setScannedUrls] = useState<ScannedUrl[]>([]);
 
   useEffect(() => {
     const savedApiKey = localStorage.getItem('apiKey');
@@ -22,13 +36,13 @@ function App() {
     }
   }, []);
 
-  const handleSaveApiKey = (key) => {
+  const handleSaveApiKey = (key: string) => {
     setApiKey(key);
     localStorage.setItem('apiKey', key);
     setCurrentPage('scan');
   };
 
-  const scanUrlWithVirusTotal = async (url) => {
+  const scanUrlWithVirusTotal = async (url: string): Promise<VirusTotalResult> => {
     try {
       const options = {
         method: 'POST',
@@ -53,17 +67,15 @@ function App() {
       console.error('VirusTotal API Error:', error);
       return {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   };
 
-  const handleUrlScanned = async (url) => {
-    
+  const handleUrlScanned = async (url: string) => {
     const virusTotalResult = await scanUrlWithVirusTotal(url);
     
-    
-    const newUrls = [
+    const newUrls: ScannedUrl[] = [
       ...scannedUrls, 
       { 
         url, 
